@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 from celery import Celery
 from app import quant_tavern_ui
 

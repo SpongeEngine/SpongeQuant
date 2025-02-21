@@ -10,8 +10,6 @@ peft==0.10.0
 sentencepiece==0.1.96
 
 # UI and core libraries
-gradio==5.15.0
+gradio==5.17.0
 huggingface_hub
 numpy==1.25.0
-celery==5.3.0
-redis==4.5.4

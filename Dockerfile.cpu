@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     libssl-dev \
     libffi-dev \
-    redis-server \
  && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------------------------------------
@@ -80,4 +79,4 @@ WORKDIR /app
 # Expose the port (for Gradio UI, for example) and set the entrypoint.
 # -------------------------------------------------------------------------------
 EXPOSE 7860
-CMD ["bash", "-c", "redis-server --daemonize yes && python3 app.py"]
+CMD ["python3", "app.py"]

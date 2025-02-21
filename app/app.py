@@ -19,7 +19,6 @@ import json
 import gradio as gr
 import shutil
 from huggingface_hub import snapshot_download, HfApi, ModelCard, create_repo
-import tasks  # This module contains the Celery task
 
 from format_quant_type import format_quant_type
 from generate_custom_model_card import generate_custom_model_card
@@ -183,7 +182,7 @@ def upload_quant_retry(model_id, base_model_name, quantization_type, save_folder
     If the upload succeeds, create a marker file "upload_success.txt" in the folder.
     Yields log messages.
     """
-    repo_id = f"{username}/{format_quant_type(quantization_type)}-{base_model_name}"
+    repo_id = f"{username}/{base_model_name}-{format_quant_type(quantization_type)}"
     success = False
     for attempt in range(1, max_retries+1):
         yield f"[INFO] Upload attempt {attempt} for repository {repo_id}\n"
@@ -211,7 +210,7 @@ def upload_quant_retry(model_id, base_model_name, quantization_type, save_folder
     return
 
 def upload_quant(model_id, base_model_name, quantization_type, save_folder, hf_token, username, **kwargs):
-    repo_id = f"{username}/{format_quant_type(quantization_type)}-{base_model_name}"
+    repo_id = f"{username}/{base_model_name}-{format_quant_type(quantization_type)}"
     log = f"[INFO] Preparing to upload quantized model to repo: {repo_id}\n"
     
     try:
@@ -662,40 +661,6 @@ def quant_tavern_ui(model_ids: str, hf_token: str, username: str,
     yield full_log
 
 # ---------------------------
-# New: Helper to start quantization as a background Celery task
-# ---------------------------
-def start_quantization(model_ids, hf_token, username,
-                       gguf_sel, gguf_param,
-                       gptq_sel, gptq_param,
-                       exllamav2_sel, exllamav2_param,
-                       awq_sel, awq_param,
-                       hqq_sel, hqq_param,
-                       enable_imatrix,
-                       calibration_file,
-                       recompute_imatrix,
-                       imatrix_process_output, imatrix_verbosity, imatrix_no_ppl,
-                       imatrix_chunk, imatrix_output_frequency, imatrix_save_frequency,
-                       imatrix_in_files, imatrix_ngl,
-                       delete_original, delete_quantized):
-    # Submit the quantization process as a Celery background task.
-    task = tasks.run_quantization.delay(
-        model_ids, hf_token, username,
-        gguf_sel, gguf_param,
-        gptq_sel, gptq_param,
-        exllamav2_sel, exllamav2_param,
-        awq_sel, awq_param,
-        hqq_sel, hqq_param,
-        enable_imatrix,
-        calibration_file,
-        recompute_imatrix,
-        imatrix_process_output, imatrix_verbosity, imatrix_no_ppl,
-        imatrix_chunk, imatrix_output_frequency, imatrix_save_frequency,
-        imatrix_in_files, imatrix_ngl,
-        delete_original, delete_quantized
-    )
-    return f"Task submitted with ID: {task.id}"
-
-# ---------------------------
 # Build the UI using Gradio
 # ---------------------------
 with gr.Blocks(title="SpongeQuant") as iface:
@@ -765,9 +730,8 @@ with gr.Blocks(title="SpongeQuant") as iface:
         run_button = gr.Button("Run Quantization")
     quant_output = gr.Textbox(label="Output Log", interactive=False, lines=20)
     
-    # Instead of calling quant_tavern_ui directly, we now call start_quantization to launch a background Celery task.
     run_button.click(
-        fn=start_quantization, 
+        fn=quant_tavern_ui, 
         inputs=[
             model_ids_input, hf_token_input, username_input,
             gguf_checkbox, gguf_param,
